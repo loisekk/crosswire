@@ -1,0 +1,105 @@
+{
+  "sources": {
+    "linkedin": {
+      "enabled": true,
+      "check_interval_minutes": 15,
+      "post_types": ["text", "article", "link"]
+    },
+    "devto": {
+      "enabled": true,
+      "check_interval_minutes": 30,
+      "api_key": "YOUR_DEVTO_API_KEY",
+      "username": "your_devto_username"
+    },
+    "hashnode": {
+      "enabled": true,
+      "check_interval_minutes": 30,
+      "api_key": "YOUR_HASHNODE_API_KEY",
+      "publication_id": "your_publication_id"
+    }
+  },
+  "targets": {
+    "x": {
+      "enabled": true,
+      "provider": "postpeer",
+      "api_key": "YOUR_PROVIDER_API_KEY",
+      "account_id": "your_x_account_id",
+      "api_secret": "",
+      "access_token": "",
+      "access_token_secret": "",
+      "max_length": 280,
+      "note": "Providers: postpeer ($0.002/post), opentweet ($12/mo), zernio (free tier), official ($100/mo)"
+    },
+    "reddit": {
+      "enabled": true,
+      "client_id": "YOUR_REDDIT_CLIENT_ID",
+      "client_secret": "YOUR_REDDIT_CLIENT_SECRET",
+      "username": "your_reddit_username",
+      "password": "your_reddit_password",
+      "user_agent": "Crosswire/1.0 by u/your_reddit_username",
+      "subreddits": ["programming", "webdev", "technology"]
+    },
+    "linkedin": {
+      "enabled": true,
+      "client_id": "YOUR_LINKEDIN_CLIENT_ID",
+      "client_secret": "YOUR_LINKEDIN_CLIENT_SECRET",
+      "access_token": "YOUR_LINKEDIN_ACCESS_TOKEN",
+      "person_urn": "urn:li:person:YOUR_PERSON_ID"
+    },
+    "devto": {
+      "enabled": true,
+      "api_key": "YOUR_DEVTO_API_KEY"
+    },
+    "hashnode": {
+      "enabled": true,
+      "api_key": "YOUR_HASHNODE_API_KEY",
+      "publication_id": "your_publication_id"
+    },
+    "indeed": {
+      "enabled": true,
+      "method": "browser_automation",
+      "email": "your_indeed_email",
+      "password": "your_indeed_password",
+      "note": "Uses Playwright browser automation. Login state cached for 24h."
+    },
+    "naukri": {
+      "enabled": true,
+      "method": "browser_automation",
+      "email": "your_naukri_email",
+      "password": "your_naukri_password",
+      "note": "Uses Playwright browser automation. Login state cached for 24h."
+    }
+  },
+  "cross_post_rules": [
+    {
+      "source": "linkedin",
+      "targets": ["x", "reddit", "naukri"],
+      "transform": {
+        "truncate_to": 280,
+        "add_linkback": true,
+        "hashtags": true
+      }
+    },
+    {
+      "source": "devto",
+      "targets": ["linkedin", "x", "reddit"],
+      "transform": {
+        "format": "article_link",
+        "add_linkback": true
+      }
+    },
+    {
+      "source": "hashnode",
+      "targets": ["linkedin", "x", "reddit"],
+      "transform": {
+        "format": "article_link",
+        "add_linkback": true
+      }
+    }
+  ],
+  "settings": {
+    "dry_run": true,
+    "log_level": "INFO",
+    "timezone": "Asia/Kolkata"
+  }
+}

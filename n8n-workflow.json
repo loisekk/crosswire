@@ -1,0 +1,219 @@
+{
+  "name": "Cross-Post Automation - Naukri Trigger",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crosspost-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json.body;\n\nconst content = input.description || input.content || '';\nconst title = input.title || '';\nconst url = input.url || '';\nconst tags = input.tags || [];\nconst imageUrl = input.image_url || null;\nconst source = input.source || 'manual';\n\nreturn [{\n  json: {\n    content,\n    title,\n    url,\n    tags,\n    imageUrl,\n    source,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "prepare-content",
+      "name": "Prepare Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst data = items[0].json;\n\nconst platforms = [\n  { name: 'linkedin', enabled: true, method: 'api' },\n  { name: 'x', enabled: true, method: 'api' },\n  { name: 'reddit', enabled: true, method: 'api' },\n  { name: 'devto', enabled: true, method: 'api' },\n  { name: 'hashnode', enabled: true, method: 'api' },\n  { name: 'naukri', enabled: true, method: 'browser' },\n  { name: 'indeed', enabled: true, method: 'browser' }\n];\n\nreturn platforms.filter(p => p.enabled).map(p => ({\n  json: {\n    ...data,\n    platform: p.name,\n    method: p.method\n  }\n}));"
+      },
+      "id": "split-platforms",
+      "name": "Split to Platforms",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "linkedin", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "LinkedIn"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "x", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "X"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "reddit", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "Reddit"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "naukri", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "Naukri"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "indeed", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "Indeed"
+            }
+          ]
+        }
+      },
+      "id": "route-platforms",
+      "name": "Route by Platform",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/api/crosspost/linkedin",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": {}
+      },
+      "id": "post-linkedin",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/api/crosspost/x",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": {}
+      },
+      "id": "post-x",
+      "name": "Post to X",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/api/crosspost/reddit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": {}
+      },
+      "id": "post-reddit",
+      "name": "Post to Reddit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/api/crosspost/naukri",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": {}
+      },
+      "id": "post-naukri",
+      "name": "Post to Naukri",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 550]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/api/crosspost/indeed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": {}
+      },
+      "id": "post-indeed",
+      "name": "Post to Indeed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 700]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"cross-posted\", \"timestamp\": new Date().toISOString() } }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1350, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Prepare Content", "type": "main", "index": 0 }]]
+    },
+    "Prepare Content": {
+      "main": [[{ "node": "Split to Platforms", "type": "main", "index": 0 }]]
+    },
+    "Split to Platforms": {
+      "main": [[{ "node": "Route by Platform", "type": "main", "index": 0 }]]
+    },
+    "Route by Platform": {
+      "main": [
+        [{ "node": "Post to LinkedIn", "type": "main", "index": 0 }],
+        [{ "node": "Post to X", "type": "main", "index": 0 }],
+        [{ "node": "Post to Reddit", "type": "main", "index": 0 }],
+        [{ "node": "Post to Naukri", "type": "main", "index": 0 }],
+        [{ "node": "Post to Indeed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Post to LinkedIn": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to X": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to Reddit": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to Naukri": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to Indeed": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
