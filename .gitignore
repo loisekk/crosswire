@@ -1,40 +1,82 @@
-# Environment variables
+# Environment
 .env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
 *.egg-info/
 dist/
 build/
 *.egg
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Logs
 logs/
 *.log
 
-# Browser state
+# Browser automation state
 ~/.crosspost/
+crosspost_state/
 
 # Config with secrets
 config/settings.json
 config/state.json
+config/credentials.json
+config/auth.json
+config/tokens.json
 
 # Test scripts with hardcoded credentials
-test_devto.py
-test_hashnode.py
-test_linkedin.py
+test_*.py
+
+# Secrets and keys
+*.key
+*.pem
+*.cert
+*.p12
+*.pfx
+*secret*
+*credential*
+*token*.txt
+*.htpasswd
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
 desktop.ini
+*.lnk
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+vendor/
+.venv/
+venv/
+env/
+
+# n8n credentials (may contain API keys)
+n8n-credentials/
+
+# Docker
+.docker/
+
+# Home directory configs
+.config/
+.gemini/
+.jcode/
+.ipython/
+.copilot/
+.docker/
+.ipynb_checkpoints/
