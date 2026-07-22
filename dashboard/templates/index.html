@@ -789,6 +789,44 @@
                 </div>
             </div>
 
+            <!-- AI Preview -->
+            <div class="history-panel">
+                <div class="section-title" style="margin-bottom: 12px;">
+                    <span class="icon">🤖</span> AI Preview
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label class="form-label">Preview platform transformation</label>
+                    <select id="previewPlatform" class="form-input" style="min-height: auto; padding: 8px 12px;">
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="x">X (Twitter)</option>
+                        <option value="reddit">Reddit</option>
+                        <option value="devto">Dev.to</option>
+                        <option value="hashnode">Hashnode</option>
+                        <option value="medium">Medium</option>
+                        <option value="indeed">Indeed</option>
+                        <option value="naukri">Naukri</option>
+                        <option value="glassdoor">Glassdoor</option>
+                        <option value="ziprecruiter">ZipRecruiter</option>
+                        <option value="shine">Shine.com</option>
+                        <option value="timesjobs">TimesJobs</option>
+                        <option value="apna">Apna</option>
+                        <option value="iimjobs">IIMJobs</option>
+                    </select>
+                    <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;" onclick="previewTransform()">
+                        Preview Transformation
+                    </button>
+                </div>
+                <div id="previewResult" style="display: none;">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Transformed for <span id="previewPlatformName"></span></div>
+                    <div id="previewContent" style="background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 14px; font-size: 13px; line-height: 1.6; max-height: 400px; overflow-y: auto; white-space: pre-wrap; color: var(--text-primary);"></div>
+                </div>
+                <div id="previewEmpty" class="empty-state" style="padding: 30px 10px;">
+                    <div class="empty-icon">✨</div>
+                    <h3>AI transforms your content</h3>
+                    <p>Write content in the form, then preview how AI adapts it for each platform</p>
+                </div>
+            </div>
+
             <!-- History -->
             <div class="history-panel">
                 <div class="section-title">
@@ -1073,6 +1111,49 @@
         toast.textContent = msg;
         toast.className = 'toast show ' + type;
         setTimeout(() => { toast.className = 'toast'; }, 3000);
+    }
+
+    /* ============================================
+       AI PREVIEW
+       ============================================ */
+    async function previewTransform() {
+        const content = document.getElementById('postContent').value.trim();
+        const title = document.getElementById('postTitle').value.trim();
+        const platform = document.getElementById('previewPlatform').value;
+
+        if (!content) { showToast('Write content first, then preview', 'error'); return; }
+
+        const previewResult = document.getElementById('previewResult');
+        const previewEmpty = document.getElementById('previewEmpty');
+        const previewContent = document.getElementById('previewContent');
+        const previewPlatformName = document.getElementById('previewPlatformName');
+
+        previewEmpty.style.display = 'none';
+        previewResult.style.display = 'none';
+        previewContent.textContent = 'Transforming...';
+        previewResult.style.display = 'block';
+        previewPlatformName.textContent = platform;
+
+        try {
+            const resp = await fetch('/api/transform', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, title, platform })
+            });
+            const result = await resp.json();
+
+            if (result.error) {
+                previewContent.textContent = 'Error: ' + result.error;
+                previewContent.style.color = 'var(--red)';
+            } else {
+                previewContent.textContent = result.content;
+                previewContent.style.color = 'var(--text-primary)';
+                showToast(`Preview: ${platform} transformation ready`, 'success');
+            }
+        } catch (e) {
+            previewContent.textContent = 'Network error: ' + e.message;
+            previewContent.style.color = 'var(--red)';
+        }
     }
 
     /* ============================================

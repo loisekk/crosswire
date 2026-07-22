@@ -172,6 +172,43 @@ def api_health():
     return jsonify({"status": "healthy", "service": "crosswire-dashboard"})
 
 
+@app.route("/api/transform", methods=["POST"])
+def api_transform():
+    data = request.json or {}
+    content = data.get("content", "").strip()
+    platform = data.get("platform", "linkedin")
+
+    if not content:
+        return jsonify({"error": "Content is required"}), 400
+
+    try:
+        from adapters.ai_transformer import AITransformer
+        transformer = AITransformer()
+        result = transformer.transform(
+            content=content,
+            title=data.get("title", ""),
+            platform=platform,
+            source_platform=data.get("source_platform", "linkedin")
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e), "content": content, "transformed": False}), 500
+
+
+@app.route("/api/settings", methods=["GET"])
+def api_settings():
+    engine = get_engine()
+    return jsonify({
+        "dry_run": engine.dry_run,
+        "ai_enabled": engine.ai_enabled,
+        "ai_model": engine.config.get("settings", {}).get("ai_model", "N/A"),
+        "ai_provider": engine.config.get("settings", {}).get("ai_provider", "ollama"),
+        "timezone": engine.config.get("settings", {}).get("timezone", "UTC"),
+        "sources": list(engine.sources.keys()),
+        "targets": list(engine.targets.keys())
+    })
+
+
 def run_dashboard(host="0.0.0.0", port=8080):
     logger.info(f"Crosswire Dashboard starting on http://{host}:{port}")
     app.run(host=host, port=port, debug=True)
