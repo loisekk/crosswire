@@ -30,8 +30,11 @@ config/credentials.json
 config/auth.json
 config/tokens.json
 
-# Test scripts with hardcoded credentials
-test_*.py
+# Test scripts with hardcoded credentials (root level only)
+/test_*.py
+
+# Exceptions
+!tests/
 
 # Secrets and keys
 *.key
