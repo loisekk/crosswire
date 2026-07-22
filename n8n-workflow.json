@@ -1,5 +1,5 @@
 {
-  "name": "Cross-Post Automation - Naukri Trigger",
+  "name": "Crosswire — AI Cross-Post Automation",
   "nodes": [
     {
       "parameters": {
@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json.body;\n\nconst content = input.description || input.content || '';\nconst title = input.title || '';\nconst url = input.url || '';\nconst tags = input.tags || [];\nconst imageUrl = input.image_url || null;\nconst source = input.source || 'manual';\n\nreturn [{\n  json: {\n    content,\n    title,\n    url,\n    tags,\n    imageUrl,\n    source,\n    timestamp: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const input = $input.first().json.body;\n\nconst content = input.description || input.content || '';\nconst title = input.title || '';\nconst url = input.url || '';\nconst tags = input.tags || [];\nconst imageUrl = input.image_url || null;\nconst source = input.source || 'linkedin';\n\nif (!content && !title) {\n  throw new Error('No content or title provided');\n}\n\nreturn [{\n  json: {\n    content,\n    title,\n    url,\n    tags,\n    imageUrl,\n    source,\n    timestamp: new Date().toISOString()\n  }\n}];"
       },
       "id": "prepare-content",
       "name": "Prepare Content",
@@ -26,13 +26,23 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst data = items[0].json;\n\nconst platforms = [\n  { name: 'linkedin', enabled: true, method: 'api' },\n  { name: 'x', enabled: true, method: 'api' },\n  { name: 'reddit', enabled: true, method: 'api' },\n  { name: 'devto', enabled: true, method: 'api' },\n  { name: 'hashnode', enabled: true, method: 'api' },\n  { name: 'naukri', enabled: true, method: 'browser' },\n  { name: 'indeed', enabled: true, method: 'browser' }\n];\n\nreturn platforms.filter(p => p.enabled).map(p => ({\n  json: {\n    ...data,\n    platform: p.name,\n    method: p.method\n  }\n}));"
+        "jsCode": "const data = $input.first().json;\n\nconst platforms = [\n  { name: 'linkedin', enabled: true, method: 'api', type: 'social' },\n  { name: 'x', enabled: true, method: 'api', type: 'social' },\n  { name: 'reddit', enabled: true, method: 'api', type: 'social' },\n  { name: 'devto', enabled: true, method: 'api', type: 'dev' },\n  { name: 'hashnode', enabled: true, method: 'api', type: 'dev' },\n  { name: 'medium', enabled: true, method: 'browser', type: 'blog' },\n  { name: 'indeed', enabled: true, method: 'browser', type: 'job' },\n  { name: 'naukri', enabled: true, method: 'browser', type: 'job' },\n  { name: 'glassdoor', enabled: true, method: 'browser', type: 'job' },\n  { name: 'ziprecruiter', enabled: true, method: 'browser', type: 'job' },\n  { name: 'shine', enabled: true, method: 'browser', type: 'job' },\n  { name: 'timesjobs', enabled: true, method: 'browser', type: 'job' },\n  { name: 'apna', enabled: true, method: 'browser', type: 'job' },\n  { name: 'iimjobs', enabled: true, method: 'browser', type: 'job' }\n];\n\nreturn platforms.filter(p => p.enabled).map(p => ({\n  json: {\n    ...data,\n    platform: p.name,\n    method: p.method,\n    platformType: p.type\n  }\n}));"
       },
       "id": "split-platforms",
       "name": "Split to Platforms",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst platform = data.platform;\nconst content = data.content;\nconst title = data.title || '';\nconst source = data.source || 'linkedin';\n\nconst prompts = {\n  linkedin: 'Transform for LinkedIn: Professional tone, hashtags, call-to-action. Max 3000 chars.',\n  x: 'Transform for X/Twitter: Max 280 chars, punchy, no hashtags. Return ONLY the tweet.',\n  reddit: 'Transform for Reddit: Casual, community-focused, no corporate speak. Ask for feedback.',\n  devto: 'Transform for Dev.to: Technical, markdown format, code blocks, educational.',\n  hashnode: 'Transform for Hashnode: Blog-style, detailed headings, SEO-friendly.',\n  medium: 'Transform for Medium: Storytelling narrative, subheadings, personal anecdotes.',\n  indeed: 'Transform for Indeed: Professional job posting, skills highlight, achievements.',\n  naukri: 'Transform for Naukri: Professional summary, technical skills, Indian job market.',\n  glassdoor: 'Transform for Glassdoor: Company review style, honest, balanced.',\n  ziprecruiter: 'Transform for ZipRecruiter: Job posting format, clear description, CTA.',\n  shine: 'Transform for Shine.com: Professional job posting, career growth focus.',\n  timesjobs: 'Transform for TimesJobs: Job listing format, responsibilities, qualifications.',\n  apna: 'Transform for Apna: Short, punchy, key skills, simple format.',\n  iimjobs: 'Transform for IIMJobs: Executive-level, leadership focus, industry keywords.'\n};\n\nconst prompt = prompts[platform] || prompts.linkedin;\n\nconst ollamaUrl = 'http://localhost:11434/api/generate';\nconst model = 'qwen2.5:3b';\n\ntry {\n  const response = await fetch(ollamaUrl, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      model: model,\n      prompt: `${prompt}\\n\\nOriginal title: ${title}\\nOriginal content: ${content}\\n\\nTransform this for ${platform}. Return ONLY the transformed content.`,\n      stream: false,\n      options: { temperature: 0.7, num_predict: 1024 }\n    })\n  });\n\n  const result = await response.json();\n  const transformed = result.response?.trim() || content;\n\n  return [{\n    json: {\n      ...data,\n      originalContent: content,\n      content: transformed,\n      transformed: true,\n      transformModel: model\n    }\n  }];\n} catch (error) {\n  return [{\n    json: {\n      ...data,\n      content: content,\n      transformed: false,\n      transformError: error.message\n    }\n  }];\n}"
+      },
+      "id": "ai-transform",
+      "name": "AI Transform per Platform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 300]
     },
     {
       "parameters": {
@@ -75,12 +85,34 @@
               "conditions": {
                 "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
                 "conditions": [
-                  { "leftValue": "={{ $json.platform }}", "rightValue": "naukri", "operator": { "type": "string", "operation": "equals" } }
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "devto", "operator": { "type": "string", "operation": "equals" } }
                 ],
                 "combinator": "and"
               },
               "renameOutput": true,
-              "outputLabel": "Naukri"
+              "outputLabel": "Dev.to"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "hashnode", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "Hashnode"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "medium", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "Medium"
             },
             {
               "conditions": {
@@ -92,6 +124,83 @@
               },
               "renameOutput": true,
               "outputLabel": "Indeed"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "naukri", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "Naukri"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "glassdoor", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "Glassdoor"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "ziprecruiter", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "ZipRecruiter"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "shine", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "Shine"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "timesjobs", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "TimesJobs"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "apna", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "Apna"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  { "leftValue": "={{ $json.platform }}", "rightValue": "iimjobs", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputLabel": "IIMJobs"
             }
           ]
         }
@@ -100,94 +209,229 @@
       "name": "Route by Platform",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [910, 300]
+      "position": [1130, 300]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/api/crosspost/linkedin",
+        "url": "http://localhost:5679/api/crosspost/linkedin",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
-        "options": {}
+        "options": { "timeout": 30000 }
       },
       "id": "post-linkedin",
       "name": "Post to LinkedIn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1130, 100]
+      "position": [1350, 50]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/api/crosspost/x",
+        "url": "http://localhost:5679/api/crosspost/x",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
-        "options": {}
+        "options": { "timeout": 30000 }
       },
       "id": "post-x",
       "name": "Post to X",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1130, 250]
+      "position": [1350, 150]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/api/crosspost/reddit",
+        "url": "http://localhost:5679/api/crosspost/reddit",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
-        "options": {}
+        "options": { "timeout": 30000 }
       },
       "id": "post-reddit",
       "name": "Post to Reddit",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1130, 400]
+      "position": [1350, 250]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/api/crosspost/naukri",
+        "url": "http://localhost:5679/api/crosspost/devto",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
-        "options": {}
+        "options": { "timeout": 30000 }
       },
-      "id": "post-naukri",
-      "name": "Post to Naukri",
+      "id": "post-devto",
+      "name": "Post to Dev.to",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1130, 550]
+      "position": [1350, 350]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/api/crosspost/indeed",
+        "url": "http://localhost:5679/api/crosspost/hashnode",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
-        "options": {}
+        "options": { "timeout": 30000 }
+      },
+      "id": "post-hashnode",
+      "name": "Post to Hashnode",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 450]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5679/api/crosspost/medium",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "post-medium",
+      "name": "Post to Medium",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 550]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5679/api/crosspost/indeed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": { "timeout": 60000 }
       },
       "id": "post-indeed",
       "name": "Post to Indeed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1130, 700]
+      "position": [1350, 650]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5679/api/crosspost/naukri",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "post-naukri",
+      "name": "Post to Naukri",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 750]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5679/api/crosspost/glassdoor",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "post-glassdoor",
+      "name": "Post to Glassdoor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 850]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5679/api/crosspost/ziprecruiter",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "post-ziprecruiter",
+      "name": "Post to ZipRecruiter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1550, 50]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5679/api/crosspost/shine",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "post-shine",
+      "name": "Post to Shine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1550, 150]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5679/api/crosspost/timesjobs",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "post-timesjobs",
+      "name": "Post to TimesJobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1550, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5679/api/crosspost/apna",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "post-apna",
+      "name": "Post to Apna",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1550, 350]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5679/api/crosspost/iimjobs",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.content, title: $json.title, url: $json.url, tags: $json.tags }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "post-iimjobs",
+      "name": "Post to IIMJobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1550, 450]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { \"status\": \"cross-posted\", \"timestamp\": new Date().toISOString() } }}",
+        "responseBody": "={{ { \"status\": \"cross-posted\", \"platforms\": 14, \"ai_transformed\": true, \"timestamp\": new Date().toISOString() } }}",
         "options": {}
       },
       "id": "respond-success",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1350, 400]
+      "position": [1750, 250]
     }
   ],
   "connections": {
@@ -198,6 +442,9 @@
       "main": [[{ "node": "Split to Platforms", "type": "main", "index": 0 }]]
     },
     "Split to Platforms": {
+      "main": [[{ "node": "AI Transform per Platform", "type": "main", "index": 0 }]]
+    },
+    "AI Transform per Platform": {
       "main": [[{ "node": "Route by Platform", "type": "main", "index": 0 }]]
     },
     "Route by Platform": {
@@ -205,15 +452,33 @@
         [{ "node": "Post to LinkedIn", "type": "main", "index": 0 }],
         [{ "node": "Post to X", "type": "main", "index": 0 }],
         [{ "node": "Post to Reddit", "type": "main", "index": 0 }],
+        [{ "node": "Post to Dev.to", "type": "main", "index": 0 }],
+        [{ "node": "Post to Hashnode", "type": "main", "index": 0 }],
+        [{ "node": "Post to Medium", "type": "main", "index": 0 }],
+        [{ "node": "Post to Indeed", "type": "main", "index": 0 }],
         [{ "node": "Post to Naukri", "type": "main", "index": 0 }],
-        [{ "node": "Post to Indeed", "type": "main", "index": 0 }]
+        [{ "node": "Post to Glassdoor", "type": "main", "index": 0 }],
+        [{ "node": "Post to ZipRecruiter", "type": "main", "index": 0 }],
+        [{ "node": "Post to Shine", "type": "main", "index": 0 }],
+        [{ "node": "Post to TimesJobs", "type": "main", "index": 0 }],
+        [{ "node": "Post to Apna", "type": "main", "index": 0 }],
+        [{ "node": "Post to IIMJobs", "type": "main", "index": 0 }]
       ]
     },
     "Post to LinkedIn": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
     "Post to X": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
     "Post to Reddit": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to Dev.to": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to Hashnode": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to Medium": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to Indeed": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
     "Post to Naukri": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
-    "Post to Indeed": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] }
+    "Post to Glassdoor": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to ZipRecruiter": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to Shine": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to TimesJobs": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to Apna": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Post to IIMJobs": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] }
   },
   "settings": { "executionOrder": "v1" }
 }
