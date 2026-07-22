@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ~/.crosspost:/root/.crosspost
+    environment:
+      - CROSSWIRE_CONFIG=/app/config/settings.json
+    command: python dashboard/app.py
+    restart: unless-stopped
+
+  webhook:
+    build: .
+    ports:
+      - "5679:5679"
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ~/.crosspost:/root/.crosspost
+    environment:
+      - CROSSWIRE_CONFIG=/app/config/settings.json
+    command: python webhook_server.py
+    restart: unless-stopped
+
+  supervisor:
+    build: .
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ~/.crosspost:/root/.crosspost
+    environment:
+      - CROSSWIRE_CONFIG=/app/config/settings.json
+    command: python supervisor.py
+    restart: unless-stopped
