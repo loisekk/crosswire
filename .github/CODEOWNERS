@@ -1,0 +1,11 @@
+# Default owner for everything in the repo
+* @loisekk
+
+# Dashboard
+/dashboard/ @loisekk
+
+# Adapters
+/adapters/ @loisekk
+
+# n8n workflow
+n8n-workflow.json @loisekk
