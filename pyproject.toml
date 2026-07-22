@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "crosswire"
+version = "2.0.0"
+description = "AI-powered content syndication engine — cross-post to 14 platforms"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Yash Brahmankar", email = "yashbrahmankar95@gmail.com"}
+]
+keywords = ["crosspost", "social-media", "automation", "ai", "ollama"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "schedule>=1.2.0",
+    "playwright>=1.40.0",
+    "flask>=3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/loisekk/crosswire"
+Repository = "https://github.com/loisekk/crosswire"
+Issues = "https://github.com/loisekk/crosswire/issues"
+
+[project.scripts]
+crosswire = "main:main"
+crosswire-dashboard = "dashboard.app:run_dashboard"
+crosswire-supervisor = "supervisor:main"
