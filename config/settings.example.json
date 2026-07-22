@@ -15,7 +15,8 @@
       "enabled": true,
       "check_interval_minutes": 30,
       "api_key": "YOUR_HASHNODE_API_KEY",
-      "publication_id": "your_publication_id"
+      "publication_id": "your_publication_id",
+      "publication_host": "your-publication.hashnode.dev"
     }
   },
   "targets": {
@@ -53,7 +54,8 @@
     "hashnode": {
       "enabled": true,
       "api_key": "YOUR_HASHNODE_API_KEY",
-      "publication_id": "your_publication_id"
+      "publication_id": "your_publication_id",
+      "publication_host": "your-publication.hashnode.dev"
     },
     "indeed": {
       "enabled": true,
