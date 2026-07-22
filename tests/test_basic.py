@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 def test_engine_loads():
     from adapters.engine import CrossPostEngine
-    engine = CrossPostEngine("config/settings.json")
+    engine = CrossPostEngine("config/settings.example.json")
     assert engine is not None
     assert len(engine.targets) > 0
     assert len(engine.sources) > 0
