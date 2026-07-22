@@ -209,6 +209,41 @@ def api_settings():
     })
 
 
+@app.route("/api/history/export")
+def api_history_export():
+    engine = get_engine()
+    history = engine.state.get("post_history", [])
+    return jsonify({
+        "exported_at": datetime.now().isoformat(),
+        "total_posts": len(history),
+        "posts": history
+    })
+
+
+@app.route("/api/health/platforms")
+def api_platform_health():
+    engine = get_engine()
+    health = {}
+    for name in ALL_PLATFORMS:
+        meta = ALL_PLATFORMS[name]
+        enabled = name in engine.targets
+        last_post = None
+        last_status = "never"
+        for post in reversed(engine.state.get("post_history", [])):
+            if post.get("target") == name:
+                last_post = post.get("timestamp")
+                last_status = post.get("status", "unknown")
+                break
+        health[name] = {
+            "type": meta["type"],
+            "enabled": enabled,
+            "last_post": last_post,
+            "last_status": last_status,
+            "configured": bool(engine.targets.get(name) if name in engine.targets else engine.sources.get(name))
+        }
+    return jsonify(health)
+
+
 def run_dashboard(host="0.0.0.0", port=8080):
     logger.info(f"Crosswire Dashboard starting on http://{host}:{port}")
     app.run(host=host, port=port, debug=True)
